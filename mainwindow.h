@@ -5,7 +5,7 @@
 #include <QPushButton>
 #include <QListWidget>
 #include <QString>
-
+#include <QDragEnterEvent>
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -27,7 +27,6 @@ private:
     QListWidget *listBoxWorld;
     QPushButton *btnOk;
     QPushButton *btnDel;
-    QString folderSelected;
 
     QString selectedPath;
     QString localSelection;
@@ -37,7 +36,8 @@ private:
     QAction *actionHideRegexMatches;
 
     QDialog *helpDialog = nullptr;
-
+    bool NIGHTMODE= false;
+    bool COLOR = true;
 private slots:
     void browseFolder();
     void loadFolders(const QString &selectedPath);
@@ -54,5 +54,11 @@ private slots:
     void deleteSelectedItems();
     void showAboutDialog();
     void showHelpDialog();
+
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dropEvent(QDropEvent *event);
+    void onFolderDropped(const QString &folderPath);
+
+    void toggleDayNightMode(bool isNightMode);
 };
 #endif // MAINWINDOW_H
