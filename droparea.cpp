@@ -26,14 +26,12 @@ DropArea::DropArea(QWidget *parent) : QWidget(parent) {
 void DropArea::dragEnterEvent(QDragEnterEvent *event) {
     if (event->mimeData()->hasUrls()) {
         event->acceptProposedAction();
-        // 更改提示信息
         static_cast<QLabel *>(layout()->itemAt(0)->widget())->setText(tr("放进此处"));
     }
 }
 
 void DropArea::dragLeaveEvent(QDragLeaveEvent *event) {
     Q_UNUSED(event);
-    // 恢复原始提示信息
     static_cast<QLabel *>(layout()->itemAt(0)->widget())->setText(tr("可拖拽进此处"));
 }
 
@@ -41,13 +39,13 @@ void DropArea::dropEvent(QDropEvent *event) {
     const auto urls = event->mimeData()->urls();
     if (!urls.isEmpty() && urls.first().isLocalFile()) {
         QString folderPath = urls.first().toLocalFile();
-        emit folderDropped(folderPath); // 发送信号
+        emit folderDropped(folderPath);
     }
 }
 
 void DropArea::mousePressEvent(QMouseEvent *event) {
     Q_UNUSED(event);
-    emit clicked();  // 当鼠标点击时发出信号
+    emit clicked();
 }
 
 

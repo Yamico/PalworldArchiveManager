@@ -66,7 +66,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     menuBar->addAction(aboutAction);
     connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutDialog);
 
-    // btnBrowse = new QPushButton(tr("打开存档目录"), this);
     listBoxLocal = new QListWidget(this);
     listBoxWorld = new QListWidget(this);
     btnOk = new QPushButton(tr("开始回档"), this);
@@ -76,7 +75,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     btnDel->setDisabled(true);
     btnDel->setStyleSheet("QPushButton { background-color: red; color: white; }");
     btnDel->hide();
-    // connect(btnBrowse, &QPushButton::clicked, this, &MainWindow::browseFolder);
 
     connect(listBoxLocal, &QListWidget::itemSelectionChanged, this, &MainWindow::onSelectionChanged);
     connect(listBoxWorld, &QListWidget::itemSelectionChanged, this, &MainWindow::onSelectionChanged);
@@ -101,7 +99,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     QLabel *labelWorld = new QLabel("World", this);
     labelLocal->setAlignment(Qt::AlignCenter);
     labelWorld->setAlignment(Qt::AlignCenter);
-    // 设置标签名称
+
     labelLocal->setObjectName("labelLocal");
     labelWorld->setObjectName("labelWorld");
 
@@ -117,14 +115,10 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     listBoxLayout->addLayout(localLayout);
     listBoxLayout->addLayout(worldLayout);
 
-    // layout->addWidget(btnBrowse);
     layout->addLayout(listBoxLayout);
     layout->addWidget(btnOk);
     layout->addWidget(btnDel);
 
-    // QWidget *centralWidget = new QWidget(this);
-    // centralWidget->setLayout(layout);
-    // setCentralWidget(centralWidget);
     auto centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
@@ -132,7 +126,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     centralWidget->setLayout(stackedLayout);
     auto dropArea = new DropArea(this);
     connect(dropArea, &DropArea::folderDropped, this, &MainWindow::onFolderDropped);
-    connect(dropArea, &DropArea::clicked, this, &MainWindow::browseFolder);  // 连接信号到槽函数
+    connect(dropArea, &DropArea::clicked, this, &MainWindow::browseFolder);
 
 
     stackedLayout->addWidget(dropArea);
@@ -147,10 +141,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
         applyRegexToListBox(listBoxLocal, checked, true);
         applyRegexToListBox(listBoxWorld, checked, true);
     });
-    // qApp->setStyleSheet("QLabel {"
-    //                     "  font-size: 16pt;"
-    //                     "  color: red;" // 使用醒目的颜色以检测变化
-    //                     "}");
 }
 
 MainWindow::~MainWindow()
@@ -243,8 +233,6 @@ bool MainWindow::validateFolder(const QString &selectedPath) {
     QDir dir(selectedPath);
     QStringList files = dir.entryList(QDir::Files | QDir::NoDotAndDotDot);
     if (files.isEmpty()) {
-        // 选定的目录为空（没有文件）
-        // QMessageBox::information(this, tr("提示"), tr("所选文件夹为空，请重新检查目录是否正确。"));
         return false;
     }
     if (!dir.exists("backup")) {
@@ -409,7 +397,6 @@ bool MainWindow::copyDirectory(const QString &sourceFolder, const QString &destF
 }
 
 void MainWindow::applyRegexToListBox(QListWidget *listBox, bool apply, bool hide) {
-    // QRegularExpression regex(".*-\\d{13}");
     QRegularExpression regex = getRegex();
     for (int i = 0; i < listBox->count(); ++i) {
         QListWidgetItem *item = listBox->item(i);
@@ -425,7 +412,6 @@ void MainWindow::applyRegexToListBox(QListWidget *listBox, bool apply, bool hide
 
 
 void MainWindow::colorizeItems(QListWidget *listBox, bool apply) {
-    // QRegularExpression regex(".*-\\d{13}");
     COLOR = apply;
     QRegularExpression regex = getRegex();
     for (int i = 0; i < listBox->count(); ++i) {
@@ -433,12 +419,12 @@ void MainWindow::colorizeItems(QListWidget *listBox, bool apply) {
         if (apply) {
             item->setBackground(!regex.match(item->text()).hasMatch() ? QBrush(Qt::red) : QBrush(Qt::green));
             item->setForeground(!regex.match(item->text()).hasMatch() ? QBrush(Qt::white) : QBrush(Qt::black));
-        } else { // 不应用彩色的话
-            if (NIGHTMODE) { // 夜间模式 黑底白字
-                item->setBackground(QBrush(Qt::black));  //
+        } else {
+            if (NIGHTMODE) {
+                item->setBackground(QBrush(Qt::black));
                 item->setForeground(QBrush(Qt::white));
             }else{
-                item->setBackground(QBrush(Qt::white));  // 或者您希望恢复的默认颜色
+                item->setBackground(QBrush(Qt::white));
                 item->setForeground(QBrush(Qt::black));
             }
 
@@ -550,7 +536,7 @@ void MainWindow::showHelpDialog() {
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
     if (event->mimeData()->hasUrls()) {
-        event->acceptProposedAction(); // 如果拖拽的是 URL（文件或文件夹），接受拖放动作
+        event->acceptProposedAction();
     }
 }
 
@@ -558,11 +544,8 @@ void MainWindow::dropEvent(QDropEvent *event) {
     const QMimeData *mimeData = event->mimeData();
     if (mimeData->hasUrls()) {
         QList<QUrl> urlList = mimeData->urls();
-
-        // 假设用户只拖拽了一个文件夹，取第一个 URL
         if (!urlList.isEmpty() && urlList.first().isLocalFile()) {
             QString folderPath = urlList.first().toLocalFile();
-            // 处理文件夹路径，例如加载文件夹
             loadFolders(folderPath);
         }
     }
@@ -573,11 +556,7 @@ void MainWindow::onFolderDropped(const QString &folderPath) {
         QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
         return;
     }
-    // 处理文件夹路径
     loadFolders(folderPath);
-
-    // 更改布局或显示其他控件
-    // 例如，切换到堆叠布局的另一个页面
     static_cast<QStackedLayout *>(centralWidget()->layout())->setCurrentIndex(1);
 }
 
@@ -587,7 +566,7 @@ const QString nightStyleSheet = "QWidget { background-color: black; color: white
                                 "QMainWindow { border: 2px solid #444; }"
                                 "QMenuBar { background-color: #333; color: white; }"
                                 "QMenuBar::item { background-color: #333; color: white; }"
-                                "QMenuBar::item:selected { background-color: #555; }" // 高亮颜色
+                                "QMenuBar::item:selected { background-color: #555; }"
                                 "QLabel#labelLocal, QLabel#labelWorld { color: black; }";
 
 

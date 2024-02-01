@@ -14,13 +14,13 @@ public:
 
 signals:
     void folderDropped(const QString &folderPath);
-    void clicked();  // 添加一个新的信号
+    void clicked();
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragLeaveEvent(QDragLeaveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;  // 重写 mousePressEvent
+    void mousePressEvent(QMouseEvent *event) override;
 };
 
 #endif // DROPAREA_H
