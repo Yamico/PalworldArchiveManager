@@ -14,6 +14,7 @@
 #include <QMimeData>
 #include <QStackedLayout>
 #include "DropArea.h"
+#include <QFont>
 
 static QRegularExpression getRegex() {
     static QRegularExpression regex("^[\\d]{4}\\.[\\d]{2}\\.[\\d]{2}-[\\d]{2}\\.[\\d]{2}\\.[\\d]{2}$");
@@ -50,7 +51,12 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     actionHideRegexMatches = new QAction(tr("隐藏手动存档备份"), this); 
     actionHideRegexMatches->setCheckable(true);
     menu->addAction(actionHideRegexMatches);
-    actionHideRegexMatches->setChecked(true); 
+    actionHideRegexMatches->setChecked(true);
+
+    QAction *toggleModeAction = new QAction(tr("切换夜间模式"), this);
+    toggleModeAction->setCheckable(true);
+    connect(toggleModeAction, &QAction::toggled, this, &MainWindow::toggleDayNightMode);
+    menuBar->addAction(toggleModeAction);
 
     QAction *helpAction = new QAction(tr("帮助"), this);
     menuBar->addAction(helpAction);
@@ -95,6 +101,9 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     QLabel *labelWorld = new QLabel("World", this);
     labelLocal->setAlignment(Qt::AlignCenter);
     labelWorld->setAlignment(Qt::AlignCenter);
+    // 设置标签名称
+    labelLocal->setObjectName("labelLocal");
+    labelWorld->setObjectName("labelWorld");
 
     QVBoxLayout *localLayout = new QVBoxLayout;
     localLayout->addWidget(listBoxLocal);
@@ -154,8 +163,9 @@ void MainWindow::browseFolder() {
     QString initial_path = QDir::cleanPath(user_profile + "/AppData/Local/Pal/Saved/SaveGames");
     
     QString selected_folder = QFileDialog::getExistingDirectory(nullptr, tr("打开存档目录"), initial_path);
-    if (selected_folder.isNull()) {
+    if (selected_folder.isEmpty()) {
         return;
+
     }
     loadFolders(selected_folder);
 }
@@ -230,11 +240,13 @@ void MainWindow::onSelectionChanged(){
 }
 
 bool MainWindow::validateFolder(const QString &selectedPath) {
-    if (selectedPath.isEmpty()) {
-        QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
+    QDir dir(selectedPath);
+    QStringList files = dir.entryList(QDir::Files | QDir::NoDotAndDotDot);
+    if (files.isEmpty()) {
+        // 选定的目录为空（没有文件）
+        // QMessageBox::information(this, tr("提示"), tr("所选文件夹为空，请重新检查目录是否正确。"));
         return false;
     }
-    QDir dir(selectedPath);
     if (!dir.exists("backup")) {
         return false;
     }
@@ -282,7 +294,7 @@ void MainWindow::createBackupAndReplace() {
     if (!bakSuccess){
         QMessageBox::StandardButton keepReply;
         keepReply = QMessageBox::question(this, tr("确认继续"),
-                                      tr("备份过程发现存档文件不全，当前存档已清理备份. \n继续执行将尝试更换选定存档 \n\n是否继续?"),
+                                      tr("备份过程发现当前存档文件不全，数据移动至备份目录. \n继续执行将尝试加载选定存档 \n\n是否继续?"),
                                       QMessageBox::Yes | QMessageBox::No);
 
         if(keepReply == QMessageBox::No){
@@ -414,13 +426,22 @@ void MainWindow::applyRegexToListBox(QListWidget *listBox, bool apply, bool hide
 
 void MainWindow::colorizeItems(QListWidget *listBox, bool apply) {
     // QRegularExpression regex(".*-\\d{13}");
+    COLOR = apply;
     QRegularExpression regex = getRegex();
     for (int i = 0; i < listBox->count(); ++i) {
         QListWidgetItem *item = listBox->item(i);
         if (apply) {
             item->setBackground(!regex.match(item->text()).hasMatch() ? QBrush(Qt::red) : QBrush(Qt::green));
-        } else {
-            item->setBackground(QBrush(Qt::white));  // 或者您希望恢复的默认颜色
+            item->setForeground(!regex.match(item->text()).hasMatch() ? QBrush(Qt::white) : QBrush(Qt::black));
+        } else { // 不应用彩色的话
+            if (NIGHTMODE) { // 夜间模式 黑底白字
+                item->setBackground(QBrush(Qt::black));  //
+                item->setForeground(QBrush(Qt::white));
+            }else{
+                item->setBackground(QBrush(Qt::white));  // 或者您希望恢复的默认颜色
+                item->setForeground(QBrush(Qt::black));
+            }
+
         }
     }
 }
@@ -476,7 +497,7 @@ void MainWindow::showAboutDialog() {
     label->setTextFormat(Qt::RichText);
     label->setTextInteractionFlags(Qt::TextBrowserInteraction);
     label->setOpenExternalLinks(true);
-    label->setText(tr("GitHub: <a href='https://github.com/Yamico/PalworldArchiveManager/issues'>https://github.com/Yamico/PalworldArchiveManager/issues</a> <br />欢迎提出issue!"));
+    label->setText(tr("GitHub: <a href='https://github.com/Yamico/PalworldArchiveManager/issues'>https://github.com/Yamico/PalworldArchiveManager/issues</a> <br />Author: KLP<br />欢迎提出issue!"));
 
     layout->addWidget(label);
 
@@ -511,6 +532,9 @@ void MainWindow::showHelpDialog() {
                                   "如需加入外部存档备份功能，欢迎提出issue!\n"
                                   "")\
                                , helpDialog);
+    QFont font;
+    font.setPointSize(11);
+    label->setFont(font);
     label->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
     layout->addWidget(label);
@@ -556,3 +580,29 @@ void MainWindow::onFolderDropped(const QString &folderPath) {
     // 例如，切换到堆叠布局的另一个页面
     static_cast<QStackedLayout *>(centralWidget()->layout())->setCurrentIndex(1);
 }
+
+const QString dayStyleSheet = "QWidget { background-color: white; color: black; }"
+                              "QLabel#labelLocal, QLabel#labelWorld { color: black; }";
+const QString nightStyleSheet = "QWidget { background-color: black; color: white; }"
+                                "QMainWindow { border: 2px solid #444; }"
+                                "QMenuBar { background-color: #333; color: white; }"
+                                "QMenuBar::item { background-color: #333; color: white; }"
+                                "QMenuBar::item:selected { background-color: #555; }" // 高亮颜色
+                                "QLabel#labelLocal, QLabel#labelWorld { color: black; }";
+
+
+void MainWindow::toggleDayNightMode(bool isNightMode) {
+    if (isNightMode) {
+        qApp->setStyleSheet(nightStyleSheet);
+        NIGHTMODE = true;
+    } else {
+        qApp->setStyleSheet(dayStyleSheet);
+        NIGHTMODE = false;
+    }
+    if (!COLOR){
+        colorizeItems(listBoxLocal, false);
+        colorizeItems(listBoxWorld, false);
+    }
+}
+
+

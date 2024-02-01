@@ -36,7 +36,8 @@ private:
     QAction *actionHideRegexMatches;
 
     QDialog *helpDialog = nullptr;
-
+    bool NIGHTMODE= false;
+    bool COLOR = true;
 private slots:
     void browseFolder();
     void loadFolders(const QString &selectedPath);
@@ -58,5 +59,6 @@ private slots:
     void dropEvent(QDropEvent *event);
     void onFolderDropped(const QString &folderPath);
 
+    void toggleDayNightMode(bool isNightMode);
 };
 #endif // MAINWINDOW_H

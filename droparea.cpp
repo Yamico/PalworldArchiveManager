@@ -8,7 +8,7 @@ DropArea::DropArea(QWidget *parent) : QWidget(parent) {
 
     setAcceptDrops(true);
     auto layout = new QVBoxLayout(this);
-    auto label = new QLabel("可拖拽进此处");
+    auto label = new QLabel(tr("可拖拽进此处"));
     label->setAlignment(Qt::AlignCenter);
     // 设置 QLabel 的样式
     label->setStyleSheet(
@@ -27,14 +27,14 @@ void DropArea::dragEnterEvent(QDragEnterEvent *event) {
     if (event->mimeData()->hasUrls()) {
         event->acceptProposedAction();
         // 更改提示信息
-        static_cast<QLabel *>(layout()->itemAt(0)->widget())->setText("放进此处");
+        static_cast<QLabel *>(layout()->itemAt(0)->widget())->setText(tr("放进此处"));
     }
 }
 
 void DropArea::dragLeaveEvent(QDragLeaveEvent *event) {
     Q_UNUSED(event);
     // 恢复原始提示信息
-    static_cast<QLabel *>(layout()->itemAt(0)->widget())->setText("可拖拽进此处");
+    static_cast<QLabel *>(layout()->itemAt(0)->widget())->setText(tr("可拖拽进此处"));
 }
 
 void DropArea::dropEvent(QDropEvent *event) {
