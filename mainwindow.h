@@ -56,5 +56,7 @@ private slots:
 
     void dragEnterEvent(QDragEnterEvent *event);
     void dropEvent(QDropEvent *event);
+    void onFolderDropped(const QString &folderPath);
+
 };
 #endif // MAINWINDOW_H

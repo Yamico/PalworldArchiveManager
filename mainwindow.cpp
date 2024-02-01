@@ -12,6 +12,8 @@
 #include <QSettings>
 #include <QTranslator>
 #include <QMimeData>
+#include <QStackedLayout>
+#include "DropArea.h"
 
 static QRegularExpression getRegex() {
     static QRegularExpression regex("^[\\d]{4}\\.[\\d]{2}\\.[\\d]{2}-[\\d]{2}\\.[\\d]{2}\\.[\\d]{2}$");
@@ -30,11 +32,15 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     QMenuBar *menuBar = new QMenuBar(this);
     setMenuBar(menuBar);
 
+    QAction *openAction = menuBar->addAction(tr("打开"));
+    menuBar->addAction(openAction);
+    connect(openAction,&QAction::triggered,this,&MainWindow::browseFolder);
 
     QMenu *menu = menuBar->addMenu(tr("选项"));
-    QAction *actionEnableButton = new QAction(tr("删除/回档"), this);
-    actionEnableButton->setCheckable(true);
-    menu->addAction(actionEnableButton);
+    QAction *switchOpAction = new QAction(tr("删除/回档"), this);
+    switchOpAction->setCheckable(true);
+    menu->addAction(switchOpAction);
+
 
     actionColorizeItems = new QAction(tr("备份颜色区分"), this);
     actionColorizeItems->setCheckable(true);
@@ -54,7 +60,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     menuBar->addAction(aboutAction);
     connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutDialog);
 
-    btnBrowse = new QPushButton(tr("打开存档目录"), this);
+    // btnBrowse = new QPushButton(tr("打开存档目录"), this);
     listBoxLocal = new QListWidget(this);
     listBoxWorld = new QListWidget(this);
     btnOk = new QPushButton(tr("开始回档"), this);
@@ -64,14 +70,15 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     btnDel->setDisabled(true);
     btnDel->setStyleSheet("QPushButton { background-color: red; color: white; }");
     btnDel->hide();
-    connect(btnBrowse, &QPushButton::clicked, this, &MainWindow::browseFolder);
+    // connect(btnBrowse, &QPushButton::clicked, this, &MainWindow::browseFolder);
+
     connect(listBoxLocal, &QListWidget::itemSelectionChanged, this, &MainWindow::onSelectionChanged);
     connect(listBoxWorld, &QListWidget::itemSelectionChanged, this, &MainWindow::onSelectionChanged);
     connect(btnOk, &QPushButton::clicked, this, &MainWindow::createBackupAndReplace);
     connect(btnDel, &QPushButton::clicked, this, &MainWindow::deleteSelectedItems);
 
-    connect(actionEnableButton, &QAction::toggled, btnDel, &QPushButton::setEnabled);
-    connect(actionEnableButton, &QAction::toggled, this, [this](bool checked) {
+    connect(switchOpAction, &QAction::toggled, btnDel, &QPushButton::setEnabled);
+    connect(switchOpAction, &QAction::toggled, this, [this](bool checked) {
         if (checked) {
             this->btnDel->show();
             this->btnOk->hide();
@@ -81,7 +88,8 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
         }
     });
 
-    QVBoxLayout *layout = new QVBoxLayout;
+    auto mainWidget = new QWidget(this);
+    auto *layout = new QVBoxLayout(mainWidget);
 
     QLabel *labelLocal = new QLabel("Local", this);
     QLabel *labelWorld = new QLabel("World", this);
@@ -100,15 +108,23 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     listBoxLayout->addLayout(localLayout);
     listBoxLayout->addLayout(worldLayout);
 
-    layout->addWidget(btnBrowse);
+    // layout->addWidget(btnBrowse);
     layout->addLayout(listBoxLayout);
     layout->addWidget(btnOk);
     layout->addWidget(btnDel);
 
-    QWidget *centralWidget = new QWidget(this);
-    centralWidget->setLayout(layout);
+    // QWidget *centralWidget = new QWidget(this);
+    // centralWidget->setLayout(layout);
+    // setCentralWidget(centralWidget);
+    auto centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
+    auto stackedLayout = new QStackedLayout(centralWidget);
+    centralWidget->setLayout(stackedLayout);
+    auto dropArea = new DropArea(this);
+    connect(dropArea, &DropArea::folderDropped, this, &MainWindow::onFolderDropped);
+    stackedLayout->addWidget(dropArea);
+    stackedLayout->addWidget(mainWidget);
 
     connect(actionColorizeItems, &QAction::toggled, this, [this](bool checked) {
         colorizeItems(this->listBoxLocal, checked);
@@ -119,7 +135,10 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
         applyRegexToListBox(listBoxLocal, checked, true);
         applyRegexToListBox(listBoxWorld, checked, true);
     });
-
+    // qApp->setStyleSheet("QLabel {"
+    //                     "  font-size: 16pt;"
+    //                     "  color: red;" // 使用醒目的颜色以检测变化
+    //                     "}");
 }
 
 MainWindow::~MainWindow()
@@ -132,15 +151,13 @@ void MainWindow::browseFolder() {
     QString initial_path = QDir::cleanPath(user_profile + "/AppData/Local/Pal/Saved/SaveGames");
     
     QString selected_folder = QFileDialog::getExistingDirectory(nullptr, tr("打开存档目录"), initial_path);
+    if (selected_folder.isNull()) {
+        return;
+    }
     loadFolders(selected_folder);
 }
 
 void MainWindow::loadFolders(const QString &selected_folder) {
-
-    if (selected_folder.isEmpty()) {
-        QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
-        return;
-    }
     if (!validateFolder(selected_folder)) {
         QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
         return;
@@ -210,6 +227,10 @@ void MainWindow::onSelectionChanged(){
 }
 
 bool MainWindow::validateFolder(const QString &selectedPath) {
+    if (selectedPath.isEmpty()) {
+        QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
+        return false;
+    }
     QDir dir(selectedPath);
     if (!dir.exists("backup")) {
         return false;
@@ -518,4 +539,17 @@ void MainWindow::dropEvent(QDropEvent *event) {
             loadFolders(folderPath);
         }
     }
+}
+
+void MainWindow::onFolderDropped(const QString &folderPath) {
+    if (!validateFolder(folderPath)) {
+        QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
+        return;
+    }
+    // 处理文件夹路径
+    loadFolders(folderPath);
+
+    // 更改布局或显示其他控件
+    // 例如，切换到堆叠布局的另一个页面
+    static_cast<QStackedLayout *>(centralWidget()->layout())->setCurrentIndex(1);
 }
