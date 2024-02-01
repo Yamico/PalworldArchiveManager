@@ -5,7 +5,7 @@
 #include <QPushButton>
 #include <QListWidget>
 #include <QString>
-
+#include <QDragEnterEvent>
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -27,7 +27,6 @@ private:
     QListWidget *listBoxWorld;
     QPushButton *btnOk;
     QPushButton *btnDel;
-    QString folderSelected;
 
     QString selectedPath;
     QString localSelection;
@@ -54,5 +53,8 @@ private slots:
     void deleteSelectedItems();
     void showAboutDialog();
     void showHelpDialog();
+
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dropEvent(QDropEvent *event);
 };
 #endif // MAINWINDOW_H

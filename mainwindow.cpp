@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QSettings>
 #include <QTranslator>
+#include <QMimeData>
 
 static QRegularExpression getRegex() {
     static QRegularExpression regex("^[\\d]{4}\\.[\\d]{2}\\.[\\d]{2}-[\\d]{2}\\.[\\d]{2}\\.[\\d]{2}$");
@@ -23,11 +24,11 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
 {
     ui->setupUi(this);
 
-    this->setWindowTitle(tr("幻兽帕鲁回档助手"));
+    setWindowTitle(tr("幻兽帕鲁回档助手"));
+    setAcceptDrops(true);
 
     QMenuBar *menuBar = new QMenuBar(this);
-
-    this->setMenuBar(menuBar);
+    setMenuBar(menuBar);
 
 
     QMenu *menu = menuBar->addMenu(tr("选项"));
@@ -62,8 +63,23 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     btnOk->setDisabled(true);
     btnDel->setDisabled(true);
     btnDel->setStyleSheet("QPushButton { background-color: red; color: white; }");
-    btnDel->hide(); 
+    btnDel->hide();
+    connect(btnBrowse, &QPushButton::clicked, this, &MainWindow::browseFolder);
+    connect(listBoxLocal, &QListWidget::itemSelectionChanged, this, &MainWindow::onSelectionChanged);
+    connect(listBoxWorld, &QListWidget::itemSelectionChanged, this, &MainWindow::onSelectionChanged);
+    connect(btnOk, &QPushButton::clicked, this, &MainWindow::createBackupAndReplace);
+    connect(btnDel, &QPushButton::clicked, this, &MainWindow::deleteSelectedItems);
 
+    connect(actionEnableButton, &QAction::toggled, btnDel, &QPushButton::setEnabled);
+    connect(actionEnableButton, &QAction::toggled, this, [this](bool checked) {
+        if (checked) {
+            this->btnDel->show();
+            this->btnOk->hide();
+        } else {
+            this->btnDel->hide();
+            this->btnOk->show();
+        }
+    });
 
     QVBoxLayout *layout = new QVBoxLayout;
 
@@ -93,12 +109,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     centralWidget->setLayout(layout);
     setCentralWidget(centralWidget);
 
-    connect(btnBrowse, &QPushButton::clicked, this, &MainWindow::browseFolder);
-    connect(listBoxLocal, &QListWidget::itemSelectionChanged, this, &MainWindow::onSelectionChanged);
-    connect(listBoxWorld, &QListWidget::itemSelectionChanged, this, &MainWindow::onSelectionChanged);
-    connect(btnOk, &QPushButton::clicked, this, &MainWindow::createBackupAndReplace);
-
-    connect(actionEnableButton, &QAction::toggled, btnDel, &QPushButton::setEnabled);
 
     connect(actionColorizeItems, &QAction::toggled, this, [this](bool checked) {
         colorizeItems(this->listBoxLocal, checked);
@@ -109,20 +119,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
         applyRegexToListBox(listBoxLocal, checked, true);
         applyRegexToListBox(listBoxWorld, checked, true);
     });
-
-  
-    connect(actionEnableButton, &QAction::toggled, this, [this](bool checked) {
-        if (checked) {
-            this->btnDel->show();
-            this->btnOk->hide();
-        } else {
-            this->btnDel->hide();
-            this->btnOk->show();
-        }
-    });
-
-    connect(btnDel, &QPushButton::clicked, this, &MainWindow::deleteSelectedItems);
-
 
 }
 
@@ -136,20 +132,22 @@ void MainWindow::browseFolder() {
     QString initial_path = QDir::cleanPath(user_profile + "/AppData/Local/Pal/Saved/SaveGames");
     
     QString selected_folder = QFileDialog::getExistingDirectory(nullptr, tr("打开存档目录"), initial_path);
-
-    if (!selected_folder.isEmpty()) {
-        if (validateFolder(selected_folder)) {
-            selectedPath = selected_folder;
-            MainWindow::folderSelected = selected_folder;
-            loadFolders(MainWindow::folderSelected);
-        } else {
-            QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
-            // std::cerr << "Selected folder is not valid." << std::endl;
-        }
-    }
+    loadFolders(selected_folder);
 }
 
-void MainWindow::loadFolders(const QString &selectedPath) {
+void MainWindow::loadFolders(const QString &selected_folder) {
+
+    if (selected_folder.isEmpty()) {
+        QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
+        return;
+    }
+    if (!validateFolder(selected_folder)) {
+        QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
+        return;
+    }
+
+    MainWindow::selectedPath = selected_folder;
+
     QDir dir(selectedPath);
     listBoxLocal->clear();
     listBoxWorld->clear();
@@ -256,7 +254,7 @@ void MainWindow::createBackupAndReplace() {
     }
 
     bool bakSuccess =backupOldFiles();
-    loadFolders(MainWindow::folderSelected);
+    loadFolders(MainWindow::selectedPath);
     if (!bakSuccess){
         QMessageBox::StandardButton keepReply;
         keepReply = QMessageBox::question(this, tr("确认继续"),
@@ -441,7 +439,7 @@ void MainWindow::deleteSelectedItems() {
             QDir(worldFolderPath).removeRecursively();
         }
     }
-    loadFolders(MainWindow::folderSelected);
+    loadFolders(MainWindow::selectedPath);
 
 }
 
@@ -472,7 +470,22 @@ void MainWindow::showHelpDialog() {
     helpDialog->setWindowTitle(tr("回档方法"));
     QVBoxLayout *layout = new QVBoxLayout(helpDialog);
 
-    QLabel *label = new QLabel(tr("1. 选择<打开存档目录>\n2. 在打开的页面中找到自己的SteamID，双击\n3. 在新页面中找到游戏目录(目录下有backup与Players文件夹)\n4. 看到两个目录时，当前所在目录即为正确目录")\
+    QLabel *label = new QLabel(tr("使用方法：\n"
+                                  "请务必至少回到标题界面再进行回档操作！不要在游戏中进行回档！\n\n方法一：\n"
+                                  "1.在游戏界面选择存档，通过点击左下角点击后可以找到存档目录\n"
+                                  "2.回到上一层，直接将该存档目录整个拖拽进来加载即可\n"
+                                  "或者\n方法二：\n"
+                                  "1. 选择菜单栏<打开>\n"
+                                  "2. 在打开的页面中找到自己的SteamID，双击\n"
+                                  "3. 在新页面中找到存档目录(目录下有backup与Players文件夹)\n"
+                                  "4. 看到两个目录时，当前所在目录即为正确目录\n\n"
+                                  "注：\n"
+                                  "1.本程序是回档工具，暂时没有做存档外部备份功能\n"
+                                  "2.仅操作单一存档目录下backup下Local与World目录\n"
+                                  "3.没有做存档外部备份功能，如果游戏界面中删除存档，进度自然全部丢失！\n"
+                                  "4.请珍惜存档，不要随意删除！\n\n"
+                                  "如需加入外部存档备份功能，欢迎提出issue!\n"
+                                  "")\
                                , helpDialog);
     label->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
@@ -487,3 +500,22 @@ void MainWindow::showHelpDialog() {
     helpDialog->show();
 }
 
+void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction(); // 如果拖拽的是 URL（文件或文件夹），接受拖放动作
+    }
+}
+
+void MainWindow::dropEvent(QDropEvent *event) {
+    const QMimeData *mimeData = event->mimeData();
+    if (mimeData->hasUrls()) {
+        QList<QUrl> urlList = mimeData->urls();
+
+        // 假设用户只拖拽了一个文件夹，取第一个 URL
+        if (!urlList.isEmpty() && urlList.first().isLocalFile()) {
+            QString folderPath = urlList.first().toLocalFile();
+            // 处理文件夹路径，例如加载文件夹
+            loadFolders(folderPath);
+        }
+    }
+}
