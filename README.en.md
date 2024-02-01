@@ -17,9 +17,15 @@ In most cases, games only automatically back up saves at certain time intervals,
 
 User Interface：
 
-![image-20240131204613235](README.assets/image-20240131204613235.png)
+![image-20240201212309261](README.en.assets/image-20240201212309261.png)
 
-After clicking "Open Archive Directory", it automatically navigates to the archive directory
+### Method 1:
+
+![2024-02-01_21-21-41](README.en.assets/2024-02-01_21-21-41.gif)
+
+### Method 2
+
+After clicking "Open", it automatically navigates to the archive directory
 
 ![image-20240131205930408](README.en.assets/image-20240131205930408.png )
 
@@ -43,7 +49,11 @@ The current archive will be automatically backed up.
 
 You can delete these archives by opening "Hide manual backup" and enabling the delete switch.
 
+## Updates
 
+v0.5 support darkmode, drag and drop
+
+![image-20240201212454665](README.en.assets/image-20240201212454665.png)
 
 
 
