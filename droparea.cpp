@@ -44,3 +44,10 @@ void DropArea::dropEvent(QDropEvent *event) {
         emit folderDropped(folderPath); // 发送信号
     }
 }
+
+void DropArea::mousePressEvent(QMouseEvent *event) {
+    Q_UNUSED(event);
+    emit clicked();  // 当鼠标点击时发出信号
+}
+
+

@@ -123,6 +123,9 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     centralWidget->setLayout(stackedLayout);
     auto dropArea = new DropArea(this);
     connect(dropArea, &DropArea::folderDropped, this, &MainWindow::onFolderDropped);
+    connect(dropArea, &DropArea::clicked, this, &MainWindow::browseFolder);  // 连接信号到槽函数
+
+
     stackedLayout->addWidget(dropArea);
     stackedLayout->addWidget(mainWidget);
 
