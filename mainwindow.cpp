@@ -155,17 +155,11 @@ void MainWindow::browseFolder() {
     QString selected_folder = QFileDialog::getExistingDirectory(nullptr, tr("打开存档目录"), initial_path);
     if (selected_folder.isEmpty()) {
         return;
-
     }
-    loadFolders(selected_folder);
+    onFolderDropped(selected_folder);
 }
 
 void MainWindow::loadFolders(const QString &selected_folder) {
-    if (!validateFolder(selected_folder)) {
-        QMessageBox::information(this, tr("异常"), tr("选择的文件夹异常，请重新检查目录是否正确。"));
-        return;
-    }
-
     MainWindow::selectedPath = selected_folder;
 
     QDir dir(selectedPath);
